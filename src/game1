@@ -1,0 +1,15 @@
+*game: player 1
+H-representation
+linearity 1 9
+begin
+9 8 rational
+0 1 0 0 0 0 0 0 
+0 0 1 0 0 0 0 0 
+0 0 0 1 0 0 0 0 
+0 0 0 0 1 0 0 0 
+0 0 0 0 0 1 0 0 
+0 0 0 0 0 0 1 0 
+0 -1 0  2 -4  1 -6  1 
+0 -2  1 -2  1 -6  1  1 
+-1 1 1 1 1 1 1 0 
+end
