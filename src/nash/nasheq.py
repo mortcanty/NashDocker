@@ -10,37 +10,74 @@ import subprocess
 from fractions import Fraction 
 from sympy import *
 from cvxopt import matrix, solvers
-import numpy as np
+import numpy as np 
+init_printing()
 
 solvers.options['show_progress'] = False
 
-def fract(n,asfloat=True):
+def fract(n,asfloat=True,den=20):
     if asfloat:
-        return float(Fraction(str(n)).limit_denominator(100))
+        return float(Fraction(str(n)).limit_denominator(den))
     else:
-        return str(Fraction(str(n)).limit_denominator(100))
+        return str(Fraction(str(n)).limit_denominator(den))
 
 def minimax(A):
-    '''Minimax solution of a matrix game. A is a sympy Matrix object.
+    '''Minimax solution of a matrix game. A is a numpy matrix.
        Returns minimax strategy of player1 and value of the game.'''    
     m,n = A.shape
-    s = min(A)
-    A = A-ones(m,n)*(s-1)
-    G = A.T.row_insert(n,eye(m)).tolist()
-#  convert G to a cvxopt matrix object (column major!!)    
-    G = [map(float,G[i]) for i in range(m+n)]
-    g = -matrix(G).T
-    c = matrix([ 1.0 for i in range(m) ])   
-    H = ones(n,1).row_insert(n,zeros(m,1)).tolist()
-#  convert to a cvxopt matrix object (column major!!)      
-    H = [map(float,H[i]) for i in range(m+n)]
-    h = - matrix(H).T
+    s = np.min(A)
+    A = A-s+1
+    G = np.bmat([[A.T],[np.eye(m)]])
+    g = -matrix(G)
+    c = matrix([1.0 for i in range(m)])  
+    H = np.zeros(m+n)
+    H[0:n] = np.ones(n)
+    h = -matrix(H)   
     sol = solvers.lp(c,g,h)
     X = np.array(sol['x'].T)[0]
     v = 1/np.sum(X)
     P = map(fract,(v*X).tolist())
     V = fract(v+s-1)
     return (P,V)
+
+def undominated(P,A):
+    ''' Returns True if mixed strategy P is undominated for payoff matrix A
+        else False. A and P are numpy matrices.'''
+    m,n = A.shape
+# construct associated matrix game Ap   
+    PA = np.tile((P*A).T, (1,m))
+    Ap = (A.T - PA).T
+    xxx = minimax(Ap)[1]
+    if xxx == 0:
+#     if its value is zero, proceed to setup LP         
+        s = np.min(Ap)
+        Ap = Ap-s+1
+        m1 = np.mat(np.ones((m,1))) 
+        n1 = np.mat(np.ones((n,1)))
+        n0 = np.mat(np.zeros((n,1)))
+        m0 = np.mat(np.zeros((m,1)))
+        t0 = np.mat(np.zeros((2,1)))
+        mm0 = np.mat(np.zeros((m,m)))
+        nn0 = np.mat(np.zeros((n,n)))  
+        imn = np.mat(np.eye(m+n))     
+        C = np.bmat( [[-(Ap*n1)], [n0]] )
+        c = matrix(C)
+        B = np.bmat( [[t0],[n1],[-m1], [n0], [m0]] )
+        b = -matrix(B)
+        M = np.bmat( [[m1.T, -n1.T], [-m1.T, n1.T], [Ap.T, nn0], [mm0, -Ap], [imn]]  )
+        mm = -matrix(M)
+        sol = solvers.lp(c,mm,b)
+        X = np.array(sol['x'].T)[0]
+        X = np.mat(X)
+        v = fract((X*C)[0,0])
+        if -v == n:
+            return True
+        else:
+            return False
+    else:
+#      dominated strategy         
+        return False
+            
 
 
 def leaving(T,s):
@@ -81,27 +118,26 @@ def pivot(i,j,r,s,T):
 def nashEquilibria(A,B=None,select='all'): 
     ''' Calculate all extreme equilibria or one
         equilibrium of a bimatrix game.
-        A and B are matrices in list form.'''
+        A and B are list of lists matrices.'''
     if B is None:
-        A = Matrix(A)
+#      zero-sum game        
+        A = np.asmatrix(A)
         return (minimax(A)+minimax(-A.T))
     if select =='all':   
-#  complete vertex enumeration with Avis-Fukuda (lrslib)       
+#      complete vertex enumeration with Avis-Fukuda (lrslib)       
         m = len(A) 
-        n = len(A[0])
+        n = len(A[0])   
 #      generate rational fraction game string 
         g = str(m)+' '+str(n)+'\n\n'
         for i in range(m):
             for j in range (n):
-#                aij = Fraction(A[i][j]).limit_denominator(100)
-                aij = fract(A[i][j],asfloat=False)
+                aij = fract(A[i][j],asfloat=False,den=100)
                 g += str(aij)+' '
             g += '\n'
         g += '\n' 
         for i in range(m):
             for j in range (n):
-#                bij = Fraction(B[i][j]).limit_denominator(100)
-                bij = fract(B[i][j],asfloat=False)
+                bij = fract(B[i][j],asfloat=False,den=100)
                 g += str(bij)+' '      
             g += '\n'       
 #      write game file to disk   
@@ -113,6 +149,7 @@ def nashEquilibria(A,B=None,select='all'):
                         stdout=subprocess.PIPE) 
         p2 = subprocess.Popen(['nash','game1','game2'],
                               stdout=subprocess.PIPE)
+#      collate the equilibria        
         result = []; qs = []; H1s = []   
         line = p2.stdout.readline()    
         while line:
@@ -130,8 +167,20 @@ def nashEquilibria(A,B=None,select='all'):
                     H1s = []  
             line = p2.stdout.readline()    
         return result
+    elif select=='perfect':
+#      select the normal form perfect equilibria        
+        eqs = nashEquilibria(A,B,select='all')
+        perfect = []
+        A = np.asmatrix(A)
+        Bt = np.asmatrix(B).T
+        for eq in eqs:
+            P = np.asmatrix(eq[0])       
+            Q = np.asmatrix(eq[2])
+            if undominated(P,A) and undominated(Q,Bt):
+                perfect.append(eq)
+        return perfect   
     elif select=='one':
-#  Lemke Howson algorithm for one equilibrium 
+#  Lemke Howson algorithm for one equilibrium. We use sympy matrices here.
         a = Matrix(A)
         b = Matrix(B)
         smallest = min(min(a),min(b))
@@ -174,8 +223,9 @@ def nashEquilibria(A,B=None,select='all'):
 
     
 if __name__ == '__main__':
-#  zero sum game    
-    A = [[4,-4,1],[-4,4,-2]]
+#  Tests    
+#  Zero sum game    
+    A = [[4.0,-4.0,1.0],[-4.0,4.0,-2.0]]
     print nashEquilibria(A)
 #  von Stengel's game    
     A = [[9504,-660,19976,-20526,1776,-8976],[-111771,31680,-130944,168124,-8514,52764], \
@@ -184,9 +234,10 @@ if __name__ == '__main__':
     B = [[72336,48081,29216,14124,1776,-8514],[-461736,-300036,-178761,-84436,-8976,52764], \
          [1227336,774576,451176,208626,19976,-130944],[-1718376,-1039236,-586476,-263076,-20526,168124], \
          [1303104,737154,397584,171204,9504,-111771],[-453420,-227040,-113850,-45936,-660,31680]]   
-    print len(nashEquilibria(A,B,select='all'))
-      
-      
+    print len(nashEquilibria(A,B,select='perfect'))
+    print nashEquilibria(A,B,select='one')
+    print '--------'        
+         
 #  Winkels' game
     A = [[1,3],[1,3],[3,1],[3,1],[2.5,2.5],[2.5,2.5]]  
     B = [[1,2],[0,-1],[-2,2],[4,-1],[-1,6],[6,-1]] 
@@ -194,5 +245,26 @@ if __name__ == '__main__':
     for i in range(len(result)):
         print result[i]
     print '--------'
-    print nashEquilibria(A,B,select='one')      
+      
+#  Spectrum auction
+    A = [[2.5,0,0,0],[4,2,0,0],[3,3,1.5,0],[2,2,2,1],[1,1,1,1]]
+    B = [[1,1,0,-1],[0,0.5,0,-1],[0,0,0,-1],[0,0,0,-0.5],[0,0,0,0]]
+    print nashEquilibria(A,B,select='perfect')
+    print '--------'
+    
+#  Dollar sharing
+    A = [[3,3,3,3,0,3,3,3,0,0,0,3,0,0,0,0], \
+         [2,2,2,0,2,2,0,0,2,2,0,0,2,0,0,0], \
+         [1,1,0,1,1,0,1,0,1,0,1,0,0,1,0,0], \
+         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
+    B = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], \
+         [1,1,1,0,1,1,0,0,1,1,0,0,1,0,0,0], \
+         [2,2,0,2,2,0,2,0,2,0,2,0,0,2,0,0], \
+         [3,0,3,3,3,0,0,3,0,3,3,0,0,0,3,0]]  
+    print len(nashEquilibria(A,B,select='all'))  
+    eqs = nashEquilibria(A,B,select='perfect')
+    for eq in eqs:
+        print eq
+    
+
    

@@ -25,7 +25,7 @@ RUN     dos2unix /notebook.sh
 
 EXPOSE 8888
 
-ENV     SCRIPTS_CHANGED 2015-01-29
+ENV     SCRIPTS_CHANGED 2015-02-03a
 COPY    dist/ /dist
 WORKDIR /dist
 RUN     tar -xzvf nash-1.0.tar.gz
