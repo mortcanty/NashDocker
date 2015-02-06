@@ -41,8 +41,6 @@
 <p>sudo docker run -d -p 433:8888 --name=nash mort/nashdocker</p>
 
 <p>and point your browser to localhost:433 </p>
-
-<p>Here is a <a href="http://ms-image-analysis.appspot.com/static/homepage/tutorialnash.html">tutorial</a>.
       </section>
     </div>
 
