@@ -11,6 +11,7 @@ from fractions import Fraction
 from sympy import *
 from cvxopt import matrix, solvers
 import numpy as np 
+import mpmath as mp 
 init_printing()
 
 solvers.options['show_progress'] = False
@@ -79,34 +80,35 @@ def undominated(P,A):
         return False
             
 
-
+# routines for Lemke-Howson
 def leaving(T,s):
     
     def lexLess(X,Y):
-        i = np.where(X-Y)[0][0]
-        return X[i]<Y[i]
+        i = np.where(X-Y)[0]
+        return X[i[0]]<Y[i[0]]
     
     def lexMax(S):
-        if len(S) ==1:    # singleton
-            return S[0][0]
+        
+        if len(S) == 1:    # singleton
+            return S[0]
         else:             # degenerate game   
-            Vs = [ T.row(S[i])/(T.row(S[i])[s+1]) for i in range(len(S)) ]
+            Vs = [ T[S[i],:]/T[S[i],s+1] for i in range(len(S)) ]
             posmax = S[0]  
             Vmax = Vs[0]
             ell = 1
-            while ell <= len(S):
+            while ell < len(S):
                 if lexLess(Vmax,Vs[ell]):
                     posmax = S[ell]
                 else:
                     Vmax = Vs[ell]
-            ell += 1
+                ell += 1
         return posmax
     
-    E = -T.T.row(0)
-    U =  T.T.row(s+1)
+    E = -(T.T)[0,:]
+    U =  (T.T)[s+1,:]
     t = [E[j]/U[j] if U[j] > 0 else oo for j in range(T.rows)] 
     tmin = min(t)
-    So = np.where(np.array(t)==tmin)
+    So = np.where(np.array(t)==tmin)[0]
     return  lexMax(So)
 
 def pivot(i,j,r,s,T):
@@ -118,7 +120,7 @@ def pivot(i,j,r,s,T):
 def nashEquilibria(A,B=None,select='all'): 
     ''' Calculate all extreme equilibria or one
         equilibrium of a bimatrix game.
-        A and B are list of lists matrices.'''
+        A and B are list of lists.'''
     if B is None:
 #      zero-sum game        
         A = np.asmatrix(A)
@@ -131,13 +133,13 @@ def nashEquilibria(A,B=None,select='all'):
         g = str(m)+' '+str(n)+'\n\n'
         for i in range(m):
             for j in range (n):
-                aij = fract(A[i][j],asfloat=False,den=100)
+                aij = fract(A[i][j],asfloat=False)
                 g += str(aij)+' '
             g += '\n'
         g += '\n' 
         for i in range(m):
             for j in range (n):
-                bij = fract(B[i][j],asfloat=False,den=100)
+                bij = fract(B[i][j],asfloat=False)
                 g += str(bij)+' '      
             g += '\n'       
 #      write game file to disk   
@@ -180,23 +182,26 @@ def nashEquilibria(A,B=None,select='all'):
                 perfect.append(eq)
         return perfect   
     elif select=='one':
-#  Lemke Howson algorithm for one equilibrium. We use sympy matrices here.
-        a = Matrix(A)
-        b = Matrix(B)
-        smallest = min(min(a),min(b))
-        A = a - ones(a.shape)*(smallest - 1)
-        B = b - ones(a.shape)*(smallest - 1)
-        m,n = A.shape
+#  Lemke Howson algorithm for one equilibrium.
+#      setup tableau with np matrices
+        a = np.matrix(A)
+        b = np.matrix(B)
+        m, n = a.shape 
+        smallest = min(np.min(a),np.min(b))
+        A = a - np.ones((m,n))*(smallest - 1)
+        B = b - np.ones((m,n))*(smallest - 1)
         k = m + n
-        M = zeros(m,m).col_insert(m,A).row_insert(m,B.T.col_insert(m,zeros(n,n)))
-        C = M.col_insert(k,ones(k))
-        T = C.col_insert(0,-ones(k,1))
+        M = np.bmat([ [np.zeros((m,m)), A],[B.T, np.zeros((n,n))] ])
+        T = np.bmat( [-np.ones((k,1)), M, np.eye(k)] )
+#     convert it to mpmath matrix
+        T = mp.matrix(T)
+#     initialize       
         beta = range(k,2*k)
         s = 0
         br = -1
     #  complementary pivoting
         while (br != 0) and (br != k):
-            tmp = zeros(k,2*k+1)
+            tmp = mp.zeros(k,2*k+1)
             r = leaving(T,s)
             for i in range(k):
                 for j in range(2*k+1):
@@ -224,47 +229,33 @@ def nashEquilibria(A,B=None,select='all'):
     
 if __name__ == '__main__':
 #  Tests    
-#  Zero sum game    
-    A = [[4.0,-4.0,1.0],[-4.0,4.0,-2.0]]
-    print nashEquilibria(A)
-#  von Stengel's game    
-    A = [[9504,-660,19976,-20526,1776,-8976],[-111771,31680,-130944,168124,-8514,52764], \
-         [397584,-113850,451176,-586476,29216,-178761],[171204,-45936,208626,-263076,14124,-84436], \
-         [1303104,-453420,1227336,-1718376,72336,-461736],[737154,-227040,774576,-1039236,48081,-300036]]        
-    B = [[72336,48081,29216,14124,1776,-8514],[-461736,-300036,-178761,-84436,-8976,52764], \
-         [1227336,774576,451176,208626,19976,-130944],[-1718376,-1039236,-586476,-263076,-20526,168124], \
-         [1303104,737154,397584,171204,9504,-111771],[-453420,-227040,-113850,-45936,-660,31680]]   
-    print len(nashEquilibria(A,B,select='perfect'))
-    print nashEquilibria(A,B,select='one')
-    print '--------'        
-         
+
 #  Winkels' game
     A = [[1,3],[1,3],[3,1],[3,1],[2.5,2.5],[2.5,2.5]]  
     B = [[1,2],[0,-1],[-2,2],[4,-1],[-1,6],[6,-1]] 
-    result =  nashEquilibria(A,B,select='all')
-    for i in range(len(result)):
-        print result[i]
-    print '--------'
-      
-#  Spectrum auction
-    A = [[2.5,0,0,0],[4,2,0,0],[3,3,1.5,0],[2,2,2,1],[1,1,1,1]]
-    B = [[1,1,0,-1],[0,0.5,0,-1],[0,0,0,-1],[0,0,0,-0.5],[0,0,0,0]]
-    print nashEquilibria(A,B,select='perfect')
-    print '--------'
+    print 'Winkels game, select=one'
+    print nashEquilibria(A,B,select='one')
     
-#  Dollar sharing
-    A = [[3,3,3,3,0,3,3,3,0,0,0,3,0,0,0,0], \
-         [2,2,2,0,2,2,0,0,2,2,0,0,2,0,0,0], \
-         [1,1,0,1,1,0,1,0,1,0,1,0,0,1,0,0], \
-         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
-    B = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], \
-         [1,1,1,0,1,1,0,0,1,1,0,0,1,0,0,0], \
-         [2,2,0,2,2,0,2,0,2,0,2,0,0,2,0,0], \
-         [3,0,3,3,3,0,0,3,0,3,3,0,0,0,3,0]]  
-    print len(nashEquilibria(A,B,select='all'))  
-    eqs = nashEquilibria(A,B,select='perfect')
+#  von Stengel's game    
+    A = [[9504,-660,19976,-20526,1776,-8976],[-111771,31680,-130944,168124,-8514,52764], \
+     [397584,-113850,451176,-586476,29216,-178761],[171204,-45936,208626,-263076,14124,-84436], \
+     [1303104,-453420,1227336,-1718376,72336,-461736],[737154,-227040,774576,-1039236,48081,-300036]]        
+    B = [[72336,48081,29216,14124,1776,-8514],[-461736,-300036,-178761,-84436,-8976,52764], \
+     [1227336,774576,451176,208626,19976,-130944],[-1718376,-1039236,-586476,-263076,-20526,168124], \
+     [1303104,737154,397584,171204,9504,-111771],[-453420,-227040,-113850,-45936,-660,31680]]  
+    print 'von Stengels game, number of equilibria'
+    ne = nashEquilibria(A,B)
+    print len(ne)
+    print 'select=one'
+    print nashEquilibria(A,B,select='one')   
+ 
+#  Random integer game
+    print 'random integer game, select=all'
+    A = np.random.randint(0,10,(5,4)).tolist() 
+    B = np.random.randint(0,10,(5,4)).tolist() 
+    eqs = nashEquilibria(A,B,select='all')
     for eq in eqs:
         print eq
+    print 'select=one'    
+    print nashEquilibria(A,B,select='one')
     
-
-   

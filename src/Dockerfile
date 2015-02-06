@@ -18,6 +18,8 @@ RUN apt-get -y install python-cvxopt
     
 RUN apt-get -y --no-install-recommends install python-sympy
 
+RUN apt-get -y install python-mpmath
+
 RUN     pip install "ipython[notebook]"
 ADD     notebook.sh /
 RUN     chmod u+x /notebook.sh
@@ -25,9 +27,9 @@ RUN     dos2unix /notebook.sh
 
 EXPOSE 8888
 
-ENV     SCRIPTS_CHANGED 2015-02-03a
+ENV     SCRIPTS_CHANGED 2015-02-06b
 COPY    dist/ /dist
-WORKDIR /dist
+WORKDIR /dist 
 RUN     tar -xzvf nash-1.0.tar.gz
 WORKDIR /dist/nash-1.0
 RUN     python setup.py install 
