@@ -100,7 +100,7 @@ def leaving(T,s):
                 if lexLess(Vmax,Vs[ell]):
                     posmax = S[ell]
                 else:
-                    Vmax = Vs[ell]
+                    Vmax = Vs[ell] 
                 ell += 1
         return posmax
     
@@ -184,6 +184,8 @@ def nashEquilibria(A,B=None,select='all'):
     elif select=='one':
 #  Lemke Howson algorithm for one equilibrium.
 #      setup tableau with np matrices
+        A = [ map(fract,row) for row in A ]
+        B = [ map(fract,row) for row in B ]
         a = np.matrix(A)
         b = np.matrix(B)
         m, n = a.shape 
@@ -235,7 +237,7 @@ if __name__ == '__main__':
     B = [[1,2],[0,-1],[-2,2],[4,-1],[-1,6],[6,-1]] 
     print 'Winkels game, select=one'
     print nashEquilibria(A,B,select='one')
-    
+     
 #  von Stengel's game    
     A = [[9504,-660,19976,-20526,1776,-8976],[-111771,31680,-130944,168124,-8514,52764], \
      [397584,-113850,451176,-586476,29216,-178761],[171204,-45936,208626,-263076,14124,-84436], \
@@ -248,14 +250,25 @@ if __name__ == '__main__':
     print len(ne)
     print 'select=one'
     print nashEquilibria(A,B,select='one')   
+    
+#  Spectrum auction
+    A = [[2.5,0,0,0],[4,2,0,0],[3,3,1.5,0],[2,2,2,1],[1,1,1,1]]
+    B = [[1,1,0,-1],[0,0.5,0,-1],[0,0,0,-1],[0,0,0,-0.5],[0,0,0,0]]  
+    print 'spectrum auction, select=all'  
+    eqs = nashEquilibria(A,B,select='all')
+    for eq in eqs:
+        print eq
+    print 'select=perfect'    
+    print nashEquilibria(A,B,select='perfect')
  
-#  Random integer game
-    print 'random integer game, select=all'
-    A = np.random.randint(0,10,(5,4)).tolist() 
-    B = np.random.randint(0,10,(5,4)).tolist() 
+#  Random game
+    print 'random game, select=all'
+    A = np.random.rand(5,4).tolist() 
+    B = np.random.rand(5,4).tolist() 
     eqs = nashEquilibria(A,B,select='all')
     for eq in eqs:
         print eq
     print 'select=one'    
     print nashEquilibria(A,B,select='one')
+    
     
