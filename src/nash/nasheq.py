@@ -11,12 +11,11 @@ from fractions import Fraction
 from sympy import *
 from cvxopt import matrix, solvers
 import numpy as np 
-import mpmath as mp 
-init_printing()
+import mpmath as mp  
 
 solvers.options['show_progress'] = False
 
-def fract(n,asfloat=True,den=20):
+def fract(n,asfloat=True,den=30):
     if asfloat:
         return float(Fraction(str(n)).limit_denominator(den))
     else:
@@ -85,13 +84,15 @@ def leaving(T,s):
     
     def lexLess(X,Y):
         i = np.where(X-Y)[0]
-        return X[i[0]]<Y[i[0]]
+        i0 = int(i[0])
+        return X[i0]<Y[i0]
+#        return X[i[0]]<Y[i[0]]
     
     def lexMax(S):
         
         if len(S) == 1:    # singleton
             return S[0]
-        else:             # degenerate game   
+        else:              # degenerate game   
             Vs = [ T[S[i],:]/T[S[i],s+1] for i in range(len(S)) ]
             posmax = S[0]  
             Vmax = Vs[0]
@@ -189,6 +190,8 @@ def nashEquilibria(A,B=None,select='all'):
         a = np.matrix(A)
         b = np.matrix(B)
         m, n = a.shape 
+        m = int(m)
+        n = int(n)
         smallest = min(np.min(a),np.min(b))
         A = a - np.ones((m,n))*(smallest - 1)
         B = b - np.ones((m,n))*(smallest - 1)
@@ -226,7 +229,7 @@ def nashEquilibria(A,B=None,select='all'):
         H2 = (P*b*Q.T)[0]
         P = list(P)
         Q = list(Q)
-        return (P,H1,Q,H2)
+        return [(P,H1,Q,H2)]
 
     
 if __name__ == '__main__':
@@ -237,7 +240,7 @@ if __name__ == '__main__':
     B = [[1,2],[0,-1],[-2,2],[4,-1],[-1,6],[6,-1]] 
     print 'Winkels game, select=one'
     print nashEquilibria(A,B,select='one')
-     
+      
 #  von Stengel's game    
     A = [[9504,-660,19976,-20526,1776,-8976],[-111771,31680,-130944,168124,-8514,52764], \
      [397584,-113850,451176,-586476,29216,-178761],[171204,-45936,208626,-263076,14124,-84436], \
@@ -249,8 +252,25 @@ if __name__ == '__main__':
     ne = nashEquilibria(A,B)
     print len(ne)
     print 'select=one'
+    print nashEquilibria(A,B,select='one')  
+    print 'number of perfect equilibria'
+    ne = nashEquilibria(A,B,select='perfect')
+    print len(ne) 
+     
+#  Todd's game
+    A = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[2/7.,2/7.,2/7.,2/7.],[3/19.,6/19.,6/19.,6/19.],[7/38.,7/38.,7/19.,7/19.]] 
+    B = [[1.,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]   
+    print 'Todds game. select=all'
+    eqs = nashEquilibria(A,B)
+    for eq in eqs:
+        print eq
+    print 'Todds game. select=perfect'
+    eqs = nashEquilibria(A,B,select='perfect')
+    for eq in eqs:
+        print eq 
+    print 'select=one'
     print nashEquilibria(A,B,select='one')   
-    
+     
 #  Spectrum auction
     A = [[2.5,0,0,0],[4,2,0,0],[3,3,1.5,0],[2,2,2,1],[1,1,1,1]]
     B = [[1,1,0,-1],[0,0.5,0,-1],[0,0,0,-1],[0,0,0,-0.5],[0,0,0,0]]  
@@ -260,15 +280,16 @@ if __name__ == '__main__':
         print eq
     print 'select=perfect'    
     print nashEquilibria(A,B,select='perfect')
- 
+  
 #  Random game
-    print 'random game, select=all'
-    A = np.random.rand(5,4).tolist() 
-    B = np.random.rand(5,4).tolist() 
-    eqs = nashEquilibria(A,B,select='all')
-    for eq in eqs:
-        print eq
-    print 'select=one'    
-    print nashEquilibria(A,B,select='one')
+    print 'random game, select=one'
+    A = np.random.rand(100,10).tolist() 
+    B = np.random.rand(100,10).tolist()    
+    eq = nashEquilibria(A,B,select='one')
+    print 'H1 = %f'%eq[0][1]
     
-    
+# APA
+    print 'APA small'
+    A=[[-19.0, -19.0, -19.0, -19.0, -13.6, -10.9, -13.6, -10.9, -46.0, -10.9, -0.0], [-19.0, -19.0, -19.0, -19.0, -13.6, -10.9, -13.6, -19.0, -24.400000000000006, -10.9, -0.0], [-19.0, -19.0, -19.0, -19.0, -13.6, -10.9, -19.0, -10.9, -24.400000000000006, -10.9, -0.0], [-19.0, -19.0, -19.0, -19.0, -46.0, -19.0, -46.0, -10.9, -24.400000000000006, -19.0, -0.0], [-19.0, -19.0, -19.0, -19.0, -19.0, -10.9, -13.6, -10.9, -46.0, -10.9, -0.0], [-100.0, -100.0, -100.0, -100.0, -13.6, -19.0, -13.6, -10.9, -24.400000000000006, -19.0, -0.0]];
+    B=[[-1.1111234569510797e-06, -1.1111234569510797e-06, -1.1111234569510797e-06, -0.012501111123457198, -0.07555674075390965, -0.10300122223580263, -0.08121330641047525, -0.10363758587216625, 0.16666592591769505, -0.10416788890246928, -0.0], [-1.1111234569510797e-06, -1.1111234569510797e-06, -1.1111234569510797e-06, -0.012501111123457198, -0.07555674075390965, -0.10300122223580263, -0.08121330641047525, -0.036364747487093285, -1.0370485599153767e-06, -0.10416788890246928, -0.0], [-1.1111234569510797e-06, -1.1111234569510797e-06, -1.1111234569510797e-06, -0.012501111123457198, -0.07555674075390965, -0.10300122223580263, -0.036364747487093285, -0.10363758587216625, -1.0370485599153767e-06, -0.10416788890246928, -0.0], [-1.1111234569510797e-06, -1.1111234569510797e-06, -1.1111234569510797e-06, -0.012501111123457198, 0.24444370369547272, -0.0300011111234572, 0.18787804712981668, -0.10363758587216625, -1.0370485599153767e-06, -0.04166777779012369, -0.0], [-1.1111234569510797e-06, -1.1111234569510797e-06, -1.1111234569510797e-06, -0.012501111123457198, -0.022223333345679275, -0.10300122223580263, -0.08121330641047525, -0.10363758587216625, 0.16666592591769505, -0.10416788890246928, -0.0], [1.0, 1.0, 1.0, 0.8749999999999976, -0.07555674075390965, -0.0300011111234572, -0.08121330641047525, -0.10363758587216625, -1.0370485599153767e-06, -0.04166777779012369, -0.0]]
+    print nashEquilibria(A,B,select='one')   

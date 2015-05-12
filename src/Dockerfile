@@ -1,6 +1,6 @@
 FROM     debian:jessie
 MAINTAINER Mort Canty "mort.canty@gmail.com"
-ENV     REFRESHED_AT 2015-01-25
+ENV     REFRESHED_AT 2015-05-12
 RUN apt-get update && apt-get install -y \
     python \
     build-essential \
@@ -31,7 +31,7 @@ ENV     SCRIPTS_CHANGED 2015-02-06c
 COPY    dist/ /dist
 WORKDIR /dist 
 RUN     tar -xzvf nash-1.0.tar.gz
-WORKDIR /dist/nash-1.0
+WORKDIR /dist/nash-1.0 
 RUN     python setup.py install 
 COPY    tutorial.ipynb /home/tutorial.ipynb 
 WORKDIR /home

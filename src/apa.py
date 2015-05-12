@@ -97,12 +97,34 @@ def APA(ps,ls,betas,alphas,ws,W,b=10,f=1,a=10,c=100,e=1,select='one'):
                 B[i,j] = (ds[j])*beta - b*(1-beta) -f*alpha
             else:
                 A[i,j] = -e*alpha
-                B[i,j] = -f*alpha     
-        i += 1    
+                B[i,j] = -f*alpha         
+        i += 1
 #  solve the game     
     print 'Calling nashEquilibria ...'      
     return (Ks,nashEquilibria(A.tolist(),B.tolist(),select=select))
 
 if __name__ == '__main__':   
+#    random.seed(1234)
     betas = random.rand(10)*0.5 
-    print betas
+    alphas = zeros(10)+0.05
+    ws = random.rand(10)
+    W = 1.0
+    ps = [[0,1,2],[1,3,6],[2,4,5,7],[0,9],[1,4,8]]
+    ls = [5,4,3,2,1]
+    Ks, eqs = APA(ps,ls,betas,alphas,ws,W,select='all')
+    print 'Found %i equilibria'%len(eqs)
+    k = 1
+    for eq in eqs:
+        print 'equlibrium %i --------------'%k
+        P = eq[0]
+        H1 = eq[1]
+        Q = array(eq[2])*100
+        H2 = eq[3]
+        print 'P:'
+        for i in range(len(Ks)):
+            if P[i] != 0:
+                print Ks[i], P[i]
+        print 'Q:'
+        print array(map(round,Q))/100.
+        print 'H1 = %f, H2 = %f'%(H1,H2)
+        k += 1
