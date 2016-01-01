@@ -80,6 +80,7 @@ def undominated(P,A):
             
 
 # routines for Lemke-Howson
+
 def leaving(T,s):
     
     def lexLess(X,Y):
@@ -94,6 +95,7 @@ def leaving(T,s):
             return S[0]
         else:              # degenerate game   
             Vs = [ T[S[i],:]/T[S[i],s+1] for i in range(len(S)) ]
+            print '***degenerate game***'
             posmax = S[0]  
             Vmax = Vs[0]
             ell = 1
@@ -172,7 +174,7 @@ def nashEquilibria(A,B=None,select='all'):
         return result
     elif select=='perfect':
 #      select the normal form perfect equilibria        
-        eqs = nashEquilibria(A,B,select='all')
+        eqs = nashEquilibria(A,B,select='all') 
         perfect = []
         A = np.asmatrix(A)
         Bt = np.asmatrix(B).T
@@ -205,7 +207,8 @@ def nashEquilibria(A,B=None,select='all'):
         s = 0
         br = -1
     #  complementary pivoting
-        while (br != 0) and (br != k):
+        degenflag= True
+        while (br != 0) and (br != k):      
             tmp = mp.zeros(k,2*k+1)
             r = leaving(T,s)
             for i in range(k):
@@ -280,6 +283,8 @@ if __name__ == '__main__':
         print eq
     print 'select=perfect'    
     print nashEquilibria(A,B,select='perfect')
+    print 'select=one'    
+    print nashEquilibria(A,B,select='one')
   
 #  Random game
     print 'random game, select=one'

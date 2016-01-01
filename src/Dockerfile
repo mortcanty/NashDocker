@@ -1,6 +1,11 @@
-FROM     debian:jessie
+# x86 architecture 
+FROM     debian:jessie  
+           
+# arm (raspberry pi) architecture       
+#FROM     resin/rpi-raspbian 
+
 MAINTAINER Mort Canty "mort.canty@gmail.com"
-ENV     REFRESHED_AT 2015-05-12
+ENV     REFRESHED_AT 2016-01-01
 RUN apt-get update && apt-get install -y \
     python \
     build-essential \

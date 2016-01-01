@@ -104,13 +104,19 @@ def APA(ps,ls,betas,alphas,ws,W,b=10,f=1,a=10,c=100,e=1,select='one'):
     return (Ks,nashEquilibria(A.tolist(),B.tolist(),select=select))
 
 if __name__ == '__main__':   
+# simulation      
 #    random.seed(1234)
-    betas = random.rand(10)*0.5 
-    alphas = zeros(10)+0.05
-    ws = random.rand(10)
+    edges = 10
+    paths = 5
+    betas = random.rand(edges)*0.5 
+    alphas = zeros(edges)+0.05
+    ws = random.rand(edges)
     W = 1.0
-    ps = [[0,1,2],[1,3,6],[2,4,5,7],[0,9],[1,4,8]]
-    ls = [5,4,3,2,1]
+    ps = []
+    for i in range(paths):
+        size = random.randint(1,edges)
+        ps.append(random.choice(range(edges),size=size,replace=False).tolist())
+    ls = random.rand(paths)
     Ks, eqs = APA(ps,ls,betas,alphas,ws,W,select='all')
     print 'Found %i equilibria'%len(eqs)
     k = 1
