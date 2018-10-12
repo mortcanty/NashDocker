@@ -1,11 +1,11 @@
 # x86 architecture 
-FROM     debian:jessie  
+FROM     ubuntu:xenial
            
 # arm (raspberry pi) architecture       
 #FROM     resin/rpi-raspbian 
 
 MAINTAINER Mort Canty "mort.canty@gmail.com"
-ENV     REFRESHED_AT 2016-01-01
+ENV     REFRESHED_AT 2018-10-11
 RUN apt-get update && apt-get install -y \
     python \
     build-essential \
@@ -25,14 +25,15 @@ RUN apt-get -y --no-install-recommends install python-sympy
 
 RUN apt-get -y install python-mpmath
 
-RUN     pip install "ipython[notebook]"
+RUN     pip install --upgrade pip
+RUN     pip install jupyter
 ADD     notebook.sh /
 RUN     chmod u+x /notebook.sh
 RUN     dos2unix /notebook.sh
 
 EXPOSE 8888
 
-ENV     SCRIPTS_CHANGED 2015-02-06c
+ENV     SCRIPTS_CHANGED 2018-10-11
 COPY    dist/ /dist
 WORKDIR /dist 
 RUN     tar -xzvf nash-1.0.tar.gz
