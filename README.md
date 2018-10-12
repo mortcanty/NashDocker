@@ -8,6 +8,3 @@ sudo docker run -d -p 433:8888 --name=nash mort/nashdocker
 
 and point your browser to localhost:433	
 
-See the tutorial:
-
-https://drive.google.com/file/d/1HNNBSQXDZaFzZs4OvTblep3pQJrqcSpo/view?usp=sharing
